@@ -25,7 +25,14 @@ log() { echo -e "${blue}! $1${reset}"; }
 input() { read -p "$(echo -e "${brightYellow}▶ $1${reset}")" "$2"; }
 confirm() { read -p "$(echo -e "\n${purple}Press any key to continue...${reset}")"; }
 
-
+check_success() {
+    if [ $? -eq 0 ]; then
+        success "$1"
+    else
+        error "$2"
+        exit 1
+    fi
+}
 
 # Function to display a progress bar
 show_progress() {
@@ -208,7 +215,7 @@ EOF
         if grep -q '^SQLALCHEMY_DATABASE_URL' "$ENV_FILE_PATH"; then
             # If SQLALCHEMY_DATABASE_URL exists, comment it out
             sed -i 's/^SQLALCHEMY_DATABASE_URL.*/#&/' "$ENV_FILE_PATH"
-            success "Commented out existing SQLALCHEMY_DATABASE_URL line."
+            check_success "Commented out existing SQLALCHEMY_DATABASE_URL line."  "Failed to comment out existing SQLALCHEMY_DATABASE_URL line."
         else
             error "No SQLALCHEMY_DATABASE_URL line found to comment out."
         fi
@@ -216,7 +223,7 @@ EOF
         if grep -q '^MYSQL_ROOT_PASSWORD' "$ENV_FILE_PATH"; then
             # If MYSQL_ROOT_PASSWORD exists, comment it out
             sed -i 's/^MYSQL_ROOT_PASSWORD.*/#&/' "$ENV_FILE_PATH"
-            success "Commented out existing MYSQL_ROOT_PASSWORD line."
+            check_success "Commented out existing MYSQL_ROOT_PASSWORD line."  "Failed to comment out existing MYSQL_ROOT_PASSWORD line."
         else
             error "No MYSQL_ROOT_PASSWORD line found to comment out."
         fi
@@ -233,8 +240,9 @@ EOF
         if docker images | grep -q "mysql"; then
             echo "MySQL image found. Removing..."
             docker rmi -f mysql:latest
+            check_success "MySQL image removed successfully." "Failed to remove MySQL image."
             sudo rm -rf /var/lib/marzban/mysql/*
-            success "MySQL data directory removed successfully."
+            check_success "MySQL data directory removed successfully." "Failed to remove MySQL data directory."
         else
             echo "MySQL image not found."
         fi
@@ -249,17 +257,16 @@ EOF
 
     log "Restarting Marzban services..."
     docker compose -f $DOCKER_COMPOSE_PATH up -d mysql
+    check_success "MySQL service started successfully." "Failed to start MySQL service."
     docker compose -f $DOCKER_COMPOSE_PATH up -d phpmyadmin
+    check_success "phpMyAdmin service started successfully." "Failed to start phpMyAdmin service."
     docker compose -f $DOCKER_COMPOSE_PATH up -d marzban
+    check_success "Marzban service started successfully." "Failed to start Marzban service."
     docker compose -f $DOCKER_COMPOSE_PATH restart marzban
+    check_success "Marzban service restarted successfully." "Failed to restart Marzban service."
     docker compose -f $DOCKER_COMPOSE_PATH restart 
+    check_success "All Marzban services restarted successfully." "Failed to restart AllMarzban services."
     
-    if [ $? -eq 0 ]; then
-        success "Marzban service restarted successfully."
-    else
-        error "Failed to restart Marzban service."
-        exit 1
-    fi
 }
 
 # Function to wait for Marzban to be fully operational
@@ -271,49 +278,23 @@ migrate_database() {
     log "Transferring data from SQLite to MySQL..."
     
     sqlite3 /var/lib/marzban/db.sqlite3 '.dump --data-only' | sed "s/INSERT INTO \([^ ]*\)/REPLACE INTO \`\1\`/g" > /tmp/dump.sql
-    if [ $? -eq 0 ]; then
-        log "SQLite dump created successfully."
-    else
-        error "Failed to create SQLite dump."
-        exit 1
-    fi
+    check_success "SQLite dump created successfully." "Failed to create SQLite dump."
 
     docker compose -f $DOCKER_COMPOSE_PATH cp /tmp/dump.sql mysql:/dump.sql
-
-
-    if [ $? -eq 0 ]; then
-        log "Dump file copied to MySQL container successfully."
-    else
-        error "Failed to copy dump file to MySQL container."
-        exit 1
-    fi
+    check_success "SQLite dump copied to MySQL container successfully." "Failed to copy SQLite dump to MySQL container."
 
     docker compose -f $DOCKER_COMPOSE_PATH  exec mysql mysql -u root -p"${DB_PASSWORD}" -h 127.0.0.1 marzban -e "SET FOREIGN_KEY_CHECKS = 0; SET NAMES utf8mb4; SOURCE /dump.sql;"
-    if [ $? -eq 0 ]; then
-        log "Data imported into MySQL successfully."
-    else
-        error "Failed to import data into MySQL."
-        exit 1
-    fi
+    check_success "Data transfer completed successfully." "Failed to transfer data from SQLite to MySQL."
 
     rm /tmp/dump.sql
-    if [ $? -eq 0 ]; then
-        log "Temporary dump file removed successfully."
-    else
-        error "Failed to remove temporary dump file."
-        exit 1
-    fi
+    check_success "Data transfer completed successfully." "Failed to transfer data from SQLite to MySQL."
+
     docker compose -f $DOCKER_COMPOSE_PATH down 
+    check_success "Marzban service STOPPED successfully." "Failed to Stop Marzban service."
     docker compose -f $DOCKER_COMPOSE_PATH up -d 
+    check_success "Marzban service Started successfully." "Failed to Start Marzban service."
     docker compose -f $DOCKER_COMPOSE_PATH restart 
-
-
-    if [ $? -eq 0 ]; then
-        success "Marzban restarted successfully."
-    else
-        error "Failed to restart Marzban."
-        exit 1
-    fi
+    check_success "Marzban service restarted successfully." "Failed to restart Marzban service."
 
     success "Data transfer and Marzban restart completed successfully."
     confirm
