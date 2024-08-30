@@ -1,4 +1,14 @@
 #!/bin/bash
+
+# DDS : DailyDigtalSKiills
+# This script will guide you through the process of setting up Marzban on MySQL.
+# It will install the necessary dependencies and create the necessary files.
+# After that, you will be prompted to provide the necessary information.
+# YOUTUBE LINK: https://www.youtube.com/@DailyDigtalSKiills
+#Telegram: @DailyDigtalSKiills
+
+
+# Set up colors
 # Colors
 colors=(
     "\033[38;2;255;105;180m"  # Foreground (#EA549F)
@@ -34,16 +44,6 @@ check_success() {
     fi
 }
 
-# Function to display a progress bar
-show_progress() {
-    local duration=$1
-    local steps=100
-    local step_duration=$((duration / steps))
-    for ((i = 0; i <= steps; i++)); do
-        echo $i
-        sleep $step_duration
-    done
-}
 
 # Function to install essentials with logging and debugging
 install_essentials() {
@@ -77,46 +77,19 @@ install_essentials() {
     fi
 }
 
-# Main menu function
-menu() {
-    while true; do
-        print ""
 
-        success " Welcome to the SQLite3 to MySQL migration (Marzban) setup script."
-        log " "
-        log " ________________________________________________________________________"
-        log " "
-                
-        success "@DailyDigtalSKiills" 
-        log " This script will guide you through the process of setting up Marzban on MySQL."
-        log " It will install the necessary dependencies and create the necessary files."
-        log " After that, you will be prompted to provide the necessary information."
-        log " Finally, you will be prompted to choose an option to start the migration."
-    
-        log " "
-        error "Please choose an option:"
-        print "1. Start Migration"
-        print "0. Exit"
+Backup_Database() {
+    local ENV_FILE_PATH="$1"
+    local DOCKER_COMPOSE_PATH="$2"
 
-        input "Enter your choice: " choice
-        case $choice in
-            1)
-                install_essentials
-                get_input
-                upgrade_to_mysql
-                migrate_database
-                ;;
-            0)
-                print "Exiting setup script. Goodbye!"
-                exit 0
-                ;;
-            *)
-                error "Invalid choice. Please try again."
-                ;;
-        esac
-    done
+    # Backup the original .env file with time stamp
+    cp "$ENV_FILE_PATH" "${ENV_FILE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
+    check_success "Original .env file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original .env file."
+    cp "DOCKER_COMPOSE_PATH" "${DOCKER_COMPOSE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
+    check_success "Original docker-compose.yml file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original docker-compose.yml file."
+
+
 }
-
 # Function to get user input with logging
 get_input() {
     default_docker_compose_path="/opt/marzban/docker-compose.yml"
@@ -200,21 +173,22 @@ EOF
 EOF
     fi
 
-    success "docker-compose.yml created at $DOCKER_COMPOSE_PATH"
+    check_success "docker-compose.yml created at $DOCKER_COMPOSE_PATH" "Failed to create docker-compose.yml."
 
     if [[ ! -f $ENV_FILE_PATH ]]; then
         error "The file $ENV_FILE_PATH does not exist."
         exit 1
     fi
 
-    # Backup the original .env file
-    cp "$ENV_FILE_PATH" "${ENV_FILE_PATH}.bak"
+
+
+    # Comment out existing SQLALCHEMY_DATABASE_URL and MYSQL_ROOT_PASSWORD lines
 
 
         # Check if the SQLALCHEMY_DATABASE_URL line exists
         if grep -q '^SQLALCHEMY_DATABASE_URL' "$ENV_FILE_PATH"; then
             # If SQLALCHEMY_DATABASE_URL exists, comment it out
-            sed -i 's/^SQLALCHEMY_DATABASE_URL.*/#&/' "$ENV_FILE_PATH"
+            sed -i 's/^SQLALCHEMY_DATABASE_URL.*/#&/' "$ENV_FILE_PATH" > /dev/null 2>&1
             check_success "Commented out existing SQLALCHEMY_DATABASE_URL line."  "Failed to comment out existing SQLALCHEMY_DATABASE_URL line."
         else
             error "No SQLALCHEMY_DATABASE_URL line found to comment out."
@@ -222,7 +196,7 @@ EOF
         # Check if the MYSQL_ROOT_PASSWORD line exists
         if grep -q '^MYSQL_ROOT_PASSWORD' "$ENV_FILE_PATH"; then
             # If MYSQL_ROOT_PASSWORD exists, comment it out
-            sed -i 's/^MYSQL_ROOT_PASSWORD.*/#&/' "$ENV_FILE_PATH"
+            sed -i 's/^MYSQL_ROOT_PASSWORD.*/#&/' "$ENV_FILE_PATH" > /dev/null 2>&1
             check_success "Commented out existing MYSQL_ROOT_PASSWORD line."  "Failed to comment out existing MYSQL_ROOT_PASSWORD line."
         else
             error "No MYSQL_ROOT_PASSWORD line found to comment out."
@@ -239,9 +213,9 @@ EOF
         # Function to remove old MySQL and phpMyAdmin images with logging and error handling
         if docker images | grep -q "mysql"; then
             echo "MySQL image found. Removing..."
-            docker rmi -f mysql:latest
+            docker rmi -f mysql:latest > /dev/null 2>&1
             check_success "MySQL image removed successfully." "Failed to remove MySQL image."
-            sudo rm -rf /var/lib/marzban/mysql/*
+            sudo rm -rf /var/lib/marzban/mysql/* > /dev/null 2>&1
             check_success "MySQL data directory removed successfully." "Failed to remove MySQL data directory."
         else
             echo "MySQL image not found."
@@ -250,21 +224,22 @@ EOF
         # Remove old MySQL and phpMyAdmin images
         if docker images | grep -q "phpmyadmin/phpmyadmin"; then
             echo "phpMyAdmin image found. Removing..."
-            docker rmi -f phpmyadmin/phpmyadmin:latest
+            docker rmi -f phpmyadmin/phpmyadmin:latest > /dev/null 2>&1
+            check_success "phpMyAdmin image removed successfully." "Failed to remove phpMyAdmin image."
         else
             echo "phpMyAdmin image not found."
         fi
 
     log "Restarting Marzban services..."
-    docker compose -f $DOCKER_COMPOSE_PATH up -d mysql
+    docker compose -f $DOCKER_COMPOSE_PATH up -d mysql > /dev/null 2>&1
     check_success "MySQL service started successfully." "Failed to start MySQL service."
-    docker compose -f $DOCKER_COMPOSE_PATH up -d phpmyadmin
+    docker compose -f $DOCKER_COMPOSE_PATH up -d phpmyadmin >/dev/null 2>&1
     check_success "phpMyAdmin service started successfully." "Failed to start phpMyAdmin service."
-    docker compose -f $DOCKER_COMPOSE_PATH up -d marzban
+    docker compose -f $DOCKER_COMPOSE_PATH up -d marzban >/dev/null 2>&1
     check_success "Marzban service started successfully." "Failed to start Marzban service."
-    docker compose -f $DOCKER_COMPOSE_PATH restart marzban
+    docker compose -f $DOCKER_COMPOSE_PATH restart marzban >/dev/null 2>&1
     check_success "Marzban service restarted successfully." "Failed to restart Marzban service."
-    docker compose -f $DOCKER_COMPOSE_PATH restart 
+    docker compose -f $DOCKER_COMPOSE_PATH restart > /dev/null 2>&1
     check_success "All Marzban services restarted successfully." "Failed to restart AllMarzban services."
     
 }
@@ -280,25 +255,76 @@ migrate_database() {
     sqlite3 /var/lib/marzban/db.sqlite3 '.dump --data-only' | sed "s/INSERT INTO \([^ ]*\)/REPLACE INTO \`\1\`/g" > /tmp/dump.sql
     check_success "SQLite dump created successfully." "Failed to create SQLite dump."
 
-    docker compose -f $DOCKER_COMPOSE_PATH cp /tmp/dump.sql mysql:/dump.sql
+    docker compose -f $DOCKER_COMPOSE_PATH cp /tmp/dump.sql mysql:/dump.sql>/dev/null 2>&1
     check_success "SQLite dump copied to MySQL container successfully." "Failed to copy SQLite dump to MySQL container."
 
-    docker compose -f $DOCKER_COMPOSE_PATH  exec mysql mysql -u root -p"${DB_PASSWORD}" -h 127.0.0.1 marzban -e "SET FOREIGN_KEY_CHECKS = 0; SET NAMES utf8mb4; SOURCE /dump.sql;"
+    docker compose -f $DOCKER_COMPOSE_PATH  exec mysql mysql -u root -p"${DB_PASSWORD}" -h 127.0.0.1 marzban -e "SET FOREIGN_KEY_CHECKS = 0; SET NAMES utf8mb4; SOURCE /dump.sql;" >/dev/null 2>&1
     check_success "Data transfer completed successfully." "Failed to transfer data from SQLite to MySQL."
 
-    rm /tmp/dump.sql
+    rm /tmp/dump.sql > /dev/null 2>&1
+    check_success "SQLite dump removed successfully." "Failed to remove SQLite dump."
     check_success "Data transfer completed successfully." "Failed to transfer data from SQLite to MySQL."
-
-    docker compose -f $DOCKER_COMPOSE_PATH down 
+    docker compose -f $DOCKER_COMPOSE_PATH down  > /dev/null 2>&1
     check_success "Marzban service STOPPED successfully." "Failed to Stop Marzban service."
-    docker compose -f $DOCKER_COMPOSE_PATH up -d 
+    docker compose -f $DOCKER_COMPOSE_PATH up -d > /dev/null 2>&1
     check_success "Marzban service Started successfully." "Failed to Start Marzban service."
-    docker compose -f $DOCKER_COMPOSE_PATH restart 
+    docker compose -f $DOCKER_COMPOSE_PATH restart > /dev/null 2>&1
     check_success "Marzban service restarted successfully." "Failed to restart Marzban service."
 
     success "Data transfer and Marzban restart completed successfully."
+    log " "
+    log " _"
+    if [ "$INSTALL_PHPMYADMIN" = "yes" ]; then
+        log " |${brightGreen} Marzban is now running on MySQL with phpMyAdmin.${reset}"
+    else
+        log " |${brightGreen} Marzban is now running on MySQL.${reset}"
+    fi
+    log " |"
+    success " |${brightCyan} Please visit http://IP:${PHPMYADMIN_PORT} to access PHPMyAdmin.${reset}"
+    log " |"
+    log " |${brightYellow} Username: root${reset}"
+    log " |${brightYellow} Password: ${DB_PASSWORD}${reset}"
+    log " |"
+    success " Backups of the original .env and docker-compose.yml files have been created in the same directory with a timestamp."
     confirm
 }
+
+# Main menu function
+menu() {
+    while true; do
+        print ""
+
+        success " Welcome to the SQLite3 to MySQL migration (Marzban) setup script."
+        log " "
+        log " ________________________________________________________________________"
+        log " "           
+        success "@DailyDigtalSKiills"
+        log " "
+        error "Please choose an option:"
+        log " "
+        print "1. Start Migration"
+        print "0. Exit"
+        log " "
+        input "Enter your choice: " choice
+        case $choice in
+            1)
+                install_essentials
+                get_input 
+                Backup_Database "$ENV_FILE_PATH" "$DOCKER_COMPOSE_PATH"
+                upgrade_to_mysql
+                migrate_database
+                ;;
+            0)
+                print "Exiting setup script. Goodbye!"
+                exit 0
+                ;;
+            *)
+                error "Invalid choice. Please try again."
+                ;;
+        esac
+    done
+}
+
 
 # Start the script
 clear
