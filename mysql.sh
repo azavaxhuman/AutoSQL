@@ -325,7 +325,7 @@ menu() {
         log ""
         log ""
         log " _______________________________GITHUB :@azavaxhuman_______________________________"
-        log " "           s
+        log " "           
         success "@DailyDigtalSKiills"
         log " "
         error "Please choose an option:"
