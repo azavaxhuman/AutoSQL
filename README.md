@@ -18,7 +18,7 @@
 just copy/paste and enjoy :
 
 ```bash
-sudo bash -c "curl -sSL https://raw.githubusercontent.com/azavaxhuman/AutoSQL/main/mysql.sh | bash"
+sudo bash -c "$(curl -sL https://raw.githubusercontent.com/azavaxhuman/AutoSQL/main/install.sh)"
 ```
 
 ## 🧭 Video Tutorial
