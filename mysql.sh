@@ -319,20 +319,19 @@ migrate_database() {
 menu() {
     while true; do
         print ""
-
+        print ""
+        log " __________________GITHUB :@azavaxhuman__________________"
+        print ""
+        print ""
         success " Welcome to the SQLite3 to MySQL migration (Marzban) setup script."
-        log " "
-        log ""
-        log ""
-        log " _______________________________GITHUB :@azavaxhuman_______________________________"
-        log " "           
+        print ""           
         success "@DailyDigtalSKiills"
-        log " "
+        print ""
         error "Please choose an option:"
-        log " "
+        print ""
         print "1. Start Migration"
         print "0. Exit"
-        log ""
+        print ""
         input "Enter your choice: " choice
         case $choice in
             1)
