@@ -77,6 +77,59 @@ install_essentials() {
     fi
 }
 
+# Function to get user input with logging
+get_input() {
+    default_docker_compose_path="/opt/marzban/docker-compose.yml"
+    default_env_file_path="/opt/marzban/.env"
+
+    print "Please provide the following information:"
+    input "Enter MySQL root password: " DB_PASSWORD
+    log "MySQL root password provided."
+
+    while true; do
+        input "Enter the path for docker-compose.yml [${default_docker_compose_path}]: " DOCKER_COMPOSE_PATH
+        DOCKER_COMPOSE_PATH=${DOCKER_COMPOSE_PATH:-$default_docker_compose_path}
+        if [[ ! -f $DOCKER_COMPOSE_PATH ]]; then
+            error "The file $DOCKER_COMPOSE_PATH does not exist."
+        else
+            log "docker-compose.yml path set to: $DOCKER_COMPOSE_PATH"
+            break
+        fi
+    done
+
+    while true; do
+        input  "Enter the path for .env file [${default_env_file_path}]: " ENV_FILE_PATH
+        ENV_FILE_PATH=${ENV_FILE_PATH:-$default_env_file_path}
+        if [[ ! -f $ENV_FILE_PATH ]]; then
+            error "The file $ENV_FILE_PATH does not exist."
+        else
+            log ".env file path set to: $ENV_FILE_PATH"
+            break
+        fi
+    done
+
+    while true; do
+        input "Do you want to install phpMyAdmin? (yes / no) [yes]:" INSTALL_PHPMYADMIN
+        INSTALL_PHPMYADMIN=${INSTALL_PHPMYADMIN:-yes}
+        if [ "$INSTALL_PHPMYADMIN" = "yes" ]; then
+            input "Enter the port for phpMyAdmin [8010]: " PHPMYADMIN_PORT
+            #check if port is valid and not already in use
+            if ! [[ "$PHPMYADMIN_PORT" =~ ^[0-9]+$ ]] || lsof -i :$PHPMYADMIN_PORT > /dev/null; then
+                error "The port $PHPMYADMIN_PORT is not valid or already in use."
+            else
+                log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
+                break
+            fi
+        elif [ "$INSTALL_PHPMYADMIN" = "no" ]; then
+            log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
+            break
+        else
+            error "Invalid input. Please enter either 'yes' or 'no'."
+        fi
+    done
+
+}
+
 
 Backup_Database() {
     local ENV_FILE_PATH="$1"
@@ -87,37 +140,10 @@ Backup_Database() {
     check_success "Original .env file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original .env file."
     cp "DOCKER_COMPOSE_PATH" "${DOCKER_COMPOSE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
     check_success "Original docker-compose.yml file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original docker-compose.yml file."
-
+    cp /var/lib/marzban/db.sqlite3 /var/lib/marzban/db.sqlite3_$(date +%Y%m%d_%H%M%S).bak > /dev/null 2>&1
+    check_success "Original db.sqlite3 file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original db.sqlite3 file."
 
 }
-# Function to get user input with logging
-get_input() {
-    default_docker_compose_path="/opt/marzban/docker-compose.yml"
-    default_env_file_path="/opt/marzban/.env"
-
-    print "Please provide the following information:"
-    input "Enter MySQL root password: " DB_PASSWORD
-    log "MySQL root password provided."
-
-    input "Enter the path for docker-compose.yml [${default_docker_compose_path}]: " DOCKER_COMPOSE_PATH
-    DOCKER_COMPOSE_PATH=${DOCKER_COMPOSE_PATH:-$default_docker_compose_path}
-    log "docker-compose.yml path set to: $DOCKER_COMPOSE_PATH"
-
-    input "Enter the path for .env file [${default_env_file_path}]: " ENV_FILE_PATH
-    ENV_FILE_PATH=${ENV_FILE_PATH:-$default_env_file_path}
-    log ".env file path set to: $ENV_FILE_PATH"
-
-    input "Do you want to install phpMyAdmin? (yes/no) [no]: " INSTALL_PHPMYADMIN
-    INSTALL_PHPMYADMIN=${INSTALL_PHPMYADMIN:-no}
-    log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
-
-    if [ "$INSTALL_PHPMYADMIN" = "yes" ]; then
-        input "Enter the port for phpMyAdmin [8010]: " PHPMYADMIN_PORT
-        PHPMYADMIN_PORT=${PHPMYADMIN_PORT:-8010}
-        log "phpMyAdmin port set to: $PHPMYADMIN_PORT"
-    fi
-}
-
 # Function to upgrade to MySQL with logging
 upgrade_to_mysql() {
     # Detect CPU architecture
@@ -313,6 +339,10 @@ menu() {
                 install_essentials
                 get_input 
                 Backup_Database "$ENV_FILE_PATH" "$DOCKER_COMPOSE_PATH"
+                if [ $? -ne 0 ]; then
+                error "Backup failed. Exiting."
+                exit 0
+                fi
                 upgrade_to_mysql
                 migrate_database
                 ;;
