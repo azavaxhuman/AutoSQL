@@ -317,6 +317,7 @@ migrate_database() {
 
 # Main menu function
 menu() {
+    local choice_Option=''
     while true; do
         print ""
         print ""
@@ -332,8 +333,8 @@ menu() {
         print "1. Start Migration"
         print "0. Exit"
         print ""
-        input "Enter your choice: " choice
-        case $choice in
+        input "Enter your choice: " choice_Option
+        case $choice_Option in
             1)
                 install_essentials
                 get_input 
