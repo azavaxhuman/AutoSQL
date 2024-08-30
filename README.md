@@ -25,7 +25,7 @@ sudo bash -c "curl -sSL https://raw.githubusercontent.com/azavaxhuman/AutoSQL/ma
 
 You can find a video tutorial on how to use this repository here.
 
-- `YOUTUBE` You Can Find [The Video ( MYSQL + Marzban ) Here](https://youtu.be/900-y56_y3w)
+- `YOUTUBE` You Can Find [The Video ( MYSQL + Marzban ) Here](#)
 
 </details>
 
