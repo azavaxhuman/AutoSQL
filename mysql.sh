@@ -296,8 +296,10 @@ menu() {
 
         success " Welcome to the SQLite3 to MySQL migration (Marzban) setup script."
         log " "
-        log " ________________________________________________________________________"
-        log " "           
+        log ""
+        log ""
+        log " _______________________________GITHUB :@azavaxhuman_______________________________"
+        log " "           s
         success "@DailyDigtalSKiills"
         log " "
         error "Please choose an option:"
