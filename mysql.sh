@@ -83,7 +83,16 @@ get_input() {
     default_env_file_path="/opt/marzban/.env"
 
     print "Please provide the following information:"
+    #password not empty
+    while true; do
     input "Enter MySQL root password: " DB_PASSWORD
+    if [ -z "$DB_PASSWORD" ]; then
+        error "Password cannot be empty."
+    else
+        log "MySQL root password provided."
+        break
+    fi
+    done
     log "MySQL root password provided."
 
     while true; do
