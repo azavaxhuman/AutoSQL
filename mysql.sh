@@ -117,25 +117,36 @@ get_input() {
         fi
     done
 
-    while true; do
-        input "Do you want to install phpMyAdmin? (yes / no) [yes]:" INSTALL_PHPMYADMIN
-        INSTALL_PHPMYADMIN=${INSTALL_PHPMYADMIN:-yes}
-        if [ "$INSTALL_PHPMYADMIN" = "yes" ]; then
-            input "Enter the port for phpMyAdmin [8010]: " PHPMYADMIN_PORT
-            #check if port is valid and not already in use
-            if ! [[ "$PHPMYADMIN_PORT" =~ ^[0-9]+$ ]] || lsof -i :$PHPMYADMIN_PORT > /dev/null; then
-                error "The port $PHPMYADMIN_PORT is not valid or already in use."
-            else
-                log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
-                break
-            fi
-        elif [ "$INSTALL_PHPMYADMIN" = "no" ]; then
-            log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
-            break
-        else
-            error "Invalid input. Please enter either 'yes' or 'no'."
+while true; do
+    input "Do you want to install phpMyAdmin? (yes / no) [yes]:" INSTALL_PHPMYADMIN
+    INSTALL_PHPMYADMIN=${INSTALL_PHPMYADMIN:-yes}
+    
+    if [ "$INSTALL_PHPMYADMIN" = "yes" ]; then
+        input "Enter the port for phpMyAdmin [8010]: " PHPMYADMIN_PORT
+        PHPMYADMIN_PORT=${PHPMYADMIN_PORT:-8010}
+        
+        if ! [[ "$PHPMYADMIN_PORT" =~ ^[0-9]+$ ]]; then
+            error "The port $PHPMYADMIN_PORT is not valid."
+            continue
         fi
-    done
+
+        if lsof -i :$PHPMYADMIN_PORT > /dev/null; then
+            error "The port $PHPMYADMIN_PORT is already in use."
+            continue
+        fi
+
+        log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
+        break
+    
+    elif [ "$INSTALL_PHPMYADMIN" = "no" ]; then
+        log "phpMyAdmin installation set to: $INSTALL_PHPMYADMIN"
+        break
+    
+    else
+        error "Invalid input. Please enter either 'yes' or 'no'."
+    fi
+done
+
 
 }
 
@@ -147,7 +158,7 @@ Backup_Database() {
     # Backup the original .env file with time stamp
     cp "$ENV_FILE_PATH" "${ENV_FILE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
     check_success "Original .env file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original .env file."
-    cp "DOCKER_COMPOSE_PATH" "${DOCKER_COMPOSE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
+    cp "$DOCKER_COMPOSE_PATH" "${DOCKER_COMPOSE_PATH}_$(date +%Y%m%d_%H%M%S).bak" > /dev/null 2>&1
     check_success "Original docker-compose.yml file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original docker-compose.yml file."
     cp /var/lib/marzban/db.sqlite3 /var/lib/marzban/db.sqlite3_$(date +%Y%m%d_%H%M%S).bak > /dev/null 2>&1
     check_success "Original db.sqlite3 file backed up successfully on $(date +%Y%m%d_%H%M%S)." "Failed to backup original db.sqlite3 file."
@@ -324,6 +335,7 @@ migrate_database() {
     confirm
 }
 
+
 # Main menu function
 menu() {
     local choice_Option=''
@@ -365,6 +377,16 @@ menu() {
         esac
     done
 }
+
+
+
+
+
+
+
+
+
+
 
 
 # Start the script
