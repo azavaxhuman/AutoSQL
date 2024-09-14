@@ -1,5 +1,5 @@
 # AutoSQL
-
+<p align="center"><img style="border-radius: 5%" src="./cap_logo.png" alt="project-image"></p>
 ## 🚩 What is it?
 
 [AutoSQL](https://github.com/azavaxhuman/AutoSQL) is a bash script that automates the process of installing and configuring MySQL Next to the Marzban panel. It installs MySQL & PHPMyAdmin whit docker-compose and configures the Marzban panel to use it.
